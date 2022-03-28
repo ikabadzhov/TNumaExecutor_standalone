@@ -25,7 +25,7 @@
 #include "ROOT/TExecutorCRTP.hxx"
 #include "ROOT/TSeq.hxx"
 #include "ROOT/RTaskArena.hxx"
-#include "ROOT/RSpan.hxx"
+//#include "ROOT/RSpan.hxx"
 #include "TError.h"
 
 #include <functional> //std::function
@@ -61,16 +61,20 @@ namespace ROOT {
       void Foreach(F func, const std::vector<T> &args, unsigned nChunks = 0);
 
       // NEW
+      /*
       template<class F, class T, class Cond = noReferenceCond<F, T>>
       void Foreach(F func, std::span<T> &args);
+      */
 
       // Map
       //
       using TExecutorCRTP<TThreadExecutor>::Map;
 
       // NEW
+      /*
       template<class F, class T, class Cond = noReferenceCond<F, T>>
       auto Map(F func, std::span<T> &args) -> std::vector<typename std::result_of<F(T)>::type>;
+      */
 
       // MapReduce
       //
@@ -99,10 +103,12 @@ namespace ROOT {
       auto MapReduce(F func, const std::vector<T> &args, R redfunc, unsigned nChunks) -> typename std::result_of<F(T)>::type;
 
       // NEW
+      /*
       template<class F, class T, class R, class Cond = noReferenceCond<F, T>>
       auto MapReduce(F func, std::span<T> &args, R redfunc) -> typename std::result_of<F(T)>::type;
       template<class F, class T, class R, class Cond = noReferenceCond<F, T>>
       auto MapReduce(F func, std::span<T> &args, R redfunc, unsigned nChunks) -> typename std::result_of<F(T)>::type;
+      */
 
       using TExecutorCRTP<TThreadExecutor>::Reduce;
       template<class T, class R> auto Reduce(const std::vector<T> &objs, R redfunc) -> decltype(redfunc(objs));
@@ -136,8 +142,10 @@ namespace ROOT {
       auto Map(F func, const std::vector<T> &args, R redfunc, unsigned nChunks) -> std::vector<typename std::result_of<F(T)>::type>;
 
       // NEW
+      /*
       template<class F, class T, class R, class Cond = noReferenceCond<F, T>>
       auto Map(F func, std::span<T> &args, R redfunc, unsigned nChunks) -> std::vector<typename std::result_of<F(T)>::type>;
+      */
 
       // Functions that interface with the parallel library used as a backend
       void   ParallelFor(unsigned start, unsigned end, unsigned step, const std::function<void(unsigned int i)> &f);
@@ -378,6 +386,7 @@ namespace ROOT {
    }
 
    // NEW
+   /*
    template<class F, class T, class Cond>
    auto TThreadExecutor::Map(F func, std::span<T> &args) -> std::vector<typename std::result_of<F(T)>::type> {
       // //check whether func is callable
@@ -395,6 +404,7 @@ namespace ROOT {
 
       return reslist;
    }
+   */
 
    //////////////////////////////////////////////////////////////////////////
    /// \brief Execute a function in parallel over the elements of a sequence, dividing the execution in nChunks and
@@ -509,6 +519,7 @@ namespace ROOT {
    }
 
    // NEW
+   /*
    template<class F, class T, class R, class Cond>
    auto TThreadExecutor::Map(F func, std::span<T> &args, R redfunc, unsigned nChunks) -> std::vector<typename std::result_of<F(T)>::type> {
       if (nChunks == 0)
@@ -535,6 +546,7 @@ namespace ROOT {
 
       return reslist;
    }
+   */
 
    //////////////////////////////////////////////////////////////////////////
    /// \brief Execute a function `nTimes` in parallel (Map) and accumulate the results into a single value (Reduce).
@@ -611,16 +623,20 @@ namespace ROOT {
    }
 
    // NEW
+   /*
    template<class F, class T, class R, class Cond>
    auto TThreadExecutor::MapReduce(F func, std::span<T> &args, R redfunc) -> typename std::result_of<F(T)>::type {
       return Reduce(Map(func, args), redfunc);
    }
+   */
 
    // NEW
+   /*
    template<class F, class T, class R, class Cond>
    auto TThreadExecutor::MapReduce(F func, std::span<T> &args, R redfunc, unsigned nChunks) -> typename std::result_of<F(T)>::type {
       return Reduce(Map(func, args, redfunc, nChunks), redfunc);
    }
+   */
 
    //////////////////////////////////////////////////////////////////////////
    /// \copydoc ROOT::Internal::TExecutor::Reduce(const std::vector<T> &objs,R redfunc)

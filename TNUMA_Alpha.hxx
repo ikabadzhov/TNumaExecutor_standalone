@@ -1,7 +1,7 @@
 #ifndef ROOT_TNUMAExecutor
 #define ROOT_TNUMAExecutor
 
-#include "ROOT/RSpan.hxx"
+//#include "ROOT/RSpan.hxx"
 #include "ROOT/RTaskArena.hxx"
 #include "ROOT/TProcessExecutor.hxx"
 #include "TThreadExecutor_Patched.hxx"
@@ -45,7 +45,7 @@ public:
 
 private:
    template <class T>
-   std::vector<std::span<T>> splitData(std::vector<T> &vec);
+   std::vector<std::vector<T>> splitData(std::vector<T> &vec);
 
    std::shared_ptr<ROOT::Internal::RTaskArenaWrapper> fTaskArenaW = nullptr;
    unsigned fNDomains{};
@@ -53,16 +53,16 @@ private:
 };
 
 template <class T>
-std::vector<std::span<T>> TNUMAExecutor::splitData(std::vector<T> &vec)
+std::vector<std::vector<T>> TNUMAExecutor::splitData(std::vector<T> &vec)
 {
    unsigned stride = (vec.size() + fNDomains - 1) / fNDomains; // ceiling the division
-   auto av = std::span<T>(vec);
-   std::vector<std::span<T>> v;
+   auto av = std::vector<T>(vec);
+   std::vector<std::vector<T>> v;
    unsigned i;
    for (i = 0; i * stride < av.size() - stride; i++) {
-      v.emplace_back(av.slice(av.begin() + i * stride, av.begin() + (i + 1) * stride));
+      v.emplace_back(std::vector<T>(av.begin() + i * stride, av.begin() + (i + 1) * stride));
    }
-   v.emplace_back(av.slice(av.begin() + i * stride, av.end()));
+   v.emplace_back(std::vector<T>(av.begin() + i * stride, av.end()));
 
    return v;
 }
