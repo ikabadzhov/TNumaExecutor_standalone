@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
+#include "TNUMA_Alpha.hxx"
 
 void pin_to_core(size_t core) {
   cpu_set_t cpuset;
@@ -56,12 +57,21 @@ int main() {
   const size_t array_size = 100 * 1000 * 1000;
   size_t ntrips = 2;
 
+  // Option 1:
+  ROOT::Experimental::TNUMAExecutor t(num_cpus);
+
+  // Option 2:
+  //ROOT::TThreadExecutor t(num_cpus);
+
+
 #pragma omp parallel
   {
     assert(omp_get_num_threads() == num_cpus);
     int tid = omp_get_thread_num();
 
-    pin_to_core(tid);
+    // Option 3:
+    //pin_to_core(tid);
+
     if (tid == 0)
       x = (char *)numa_alloc_local(array_size);
 
