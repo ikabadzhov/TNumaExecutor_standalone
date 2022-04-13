@@ -91,8 +91,8 @@ auto TNUMAExecutor::MapReduce(F func, unsigned nTimes, R redfunc, unsigned nChun
       if (fNDomains != 1) {
          auto res =  i ? (nChunks ? threadExecutor.MapReduce(func, int(nTimes / fNDomains), redfunc, nChunks / fNDomains)
                                   : threadExecutor.MapReduce(func, int(nTimes / fNDomains), redfunc))
-                       : (nChunks ? threadExecutor.MapReduce(func, nTimes % fNDomains, redfunc, nChunks / fNDomains)
-                                  : threadExecutor.MapReduce(func, nTimes % fNDomains, redfunc));
+                       : (nChunks ? threadExecutor.MapReduce(func, nTimes / fNDomains + nTimes % fNDomains, redfunc, nChunks / fNDomains)
+                                  : threadExecutor.MapReduce(func, nTimes / fNDomains + nTimes % fNDomains, redfunc));
          numa_run_on_node_mask(numa_all_nodes_ptr);
          return res;
       }
