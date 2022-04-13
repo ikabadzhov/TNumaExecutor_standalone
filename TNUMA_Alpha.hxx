@@ -4,7 +4,10 @@
 //#include "ROOT/RSpan.hxx"
 #include "ROOT/RTaskArena.hxx"
 #include "ROOT/TProcessExecutor.hxx"
-#include "TThreadExecutor_Patched.hxx"
+#include "ROOT/TThreadExecutor.hxx"
+#include "tbb/task_arena.h"
+#define TBB_PREVIEW_GLOBAL_CONTROL 1 // required for TBB versions preceding 2019_U4
+#include "tbb/global_control.h"
 
 #include <algorithm> // std::min, std::max
 #include <numa.h>
@@ -21,9 +24,22 @@ public:
                               !(std::is_reference<typename std::result_of<F(T...)>::type>::value)>::type;
 
    TNUMAExecutor(unsigned nThreads = 0u)
-      : fTaskArenaW(ROOT::Internal::GetGlobalTaskArena(nThreads)), fNDomains(numa_max_node() + 1)
    {
-      fDomainNThreads = fTaskArenaW->TaskArenaSize() / fNDomains;
+      // TODO: use fTBBArena->max_concurrency();
+      const unsigned tbbDefaultNumberThreads = std::thread::hardware_concurrency();
+      nThreads = nThreads > 0 ? std::min(nThreads, tbbDefaultNumberThreads) : tbbDefaultNumberThreads;
+      /*
+      const unsigned bcCpus = ROOT::Internal::LogicalCPUBandwithControl();
+      if (nThreads > bcCpus) {
+         Warning("TNUMAExecutor", "CPU Bandwith Control Active. Proceeding with %d threads accordingly", bcCpus);
+         nThreads = bcCpus;
+      }
+      if (nThreads > tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism)) {
+         Warning("TNUMAExecutor", "tbb::global_control is active, limiting the number of parallel workers.");
+      }
+      */
+      fNDomains = numa_max_node() + 1;
+      fDomainNThreads = tbbDefaultNumberThreads / fNDomains;
    }
 
    unsigned GetNUMADomains() const { return fNDomains; }
@@ -45,18 +61,16 @@ public:
 
 private:
    template <class T>
-   std::vector<std::vector<T>> splitData(std::vector<T> &vec);
+   std::vector<std::vector<T>> splitData(std::vector<T> &av);
 
-   std::shared_ptr<ROOT::Internal::RTaskArenaWrapper> fTaskArenaW = nullptr;
    unsigned fNDomains{};
    unsigned fDomainNThreads{};
 };
 
 template <class T>
-std::vector<std::vector<T>> TNUMAExecutor::splitData(std::vector<T> &vec)
+std::vector<std::vector<T>> TNUMAExecutor::splitData(std::vector<T> &av)
 {
-   unsigned stride = (vec.size() + fNDomains - 1) / fNDomains; // ceiling the division
-   auto av = std::vector<T>(vec);
+   unsigned stride = (av.size() + fNDomains - 1) / fNDomains; // ceiling the division
    std::vector<std::vector<T>> v;
    unsigned i;
    for (i = 0; i * stride < av.size() - stride; i++) {
@@ -74,10 +88,19 @@ auto TNUMAExecutor::MapReduce(F func, unsigned nTimes, R redfunc, unsigned nChun
    auto runOnNode = [&](unsigned int i) {
       numa_run_on_node(i);
       ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
-      auto res = nChunks ? threadExecutor.MapReduce(func, nTimes, redfunc, nChunks / fNDomains)
-                         : threadExecutor.MapReduce(func, nTimes, redfunc);
-      numa_run_on_node_mask(numa_all_nodes_ptr);
-      return res;
+      if (fNDomains != 1) {
+         auto res =  i ? (nChunks ? threadExecutor.MapReduce(func, int(nTimes / fNDomains), redfunc, nChunks / fNDomains)
+                                  : threadExecutor.MapReduce(func, int(nTimes / fNDomains), redfunc))
+                       : (nChunks ? threadExecutor.MapReduce(func, nTimes % fNDomains, redfunc, nChunks / fNDomains)
+                                  : threadExecutor.MapReduce(func, nTimes % fNDomains, redfunc));
+         numa_run_on_node_mask(numa_all_nodes_ptr);
+         return res;
+      }
+      else {
+         auto res = threadExecutor.MapReduce(func, nTimes, redfunc);
+         numa_run_on_node_mask(numa_all_nodes_ptr);
+         return res;
+      }
    };
 
    ROOT::TProcessExecutor processExecutor(fNDomains);
