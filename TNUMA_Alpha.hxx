@@ -1,6 +1,9 @@
 #ifndef ROOT_TNUMAExecutor
 #define ROOT_TNUMAExecutor
 
+// Require TBB without captured exceptions
+#define TBB_USE_CAPTURED_EXCEPTION 0
+
 //#include "ROOT/RSpan.hxx"
 #include "ROOT/RTaskArena.hxx"
 #include "ROOT/TProcessExecutor.hxx"
@@ -14,6 +17,7 @@
 #include <thread>
 
 namespace ROOT {
+
 namespace Experimental {
 
 class TNUMAExecutor {
@@ -23,21 +27,23 @@ public:
       typename std::enable_if<"Function can't return a reference" &&
                               !(std::is_reference<typename std::result_of<F(T...)>::type>::value)>::type;
 
-   TNUMAExecutor(unsigned nThreads = 0u)
+   TNUMAExecutor(unsigned nThreads = 0u) 
    {
       // TODO: use fTBBArena->max_concurrency();
       const unsigned tbbDefaultNumberThreads = std::thread::hardware_concurrency();
       nThreads = nThreads > 0 ? std::min(nThreads, tbbDefaultNumberThreads) : tbbDefaultNumberThreads;
-      /*
+      
       const unsigned bcCpus = ROOT::Internal::LogicalCPUBandwithControl();
+      
       if (nThreads > bcCpus) {
-         Warning("TNUMAExecutor", "CPU Bandwith Control Active. Proceeding with %d threads accordingly", bcCpus);
+         Warning("TNUMAExecutor", "CPU Bandwith Control Active. Proceeding with %d threads accordingly.", bcCpus);
          nThreads = bcCpus;
       }
-      if (nThreads > tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism)) {
-         Warning("TNUMAExecutor", "tbb::global_control is active, limiting the number of parallel workers.");
-      }
-      */
+      // TODO: apply this condition
+      //if (nThreads > tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism)) {
+      //   Warning("TNUMAExecutor", "tbb::global_control is active, limiting the number of parallel workers.");
+      //}
+      
       fNDomains = numa_max_node() + 1;
       fDomainNThreads = tbbDefaultNumberThreads / fNDomains;
    }
@@ -60,69 +66,68 @@ public:
    auto MapReduce(F func, std::vector<T> &args, R redfunc, unsigned nChunks = 0) -> typename std::result_of<F(T)>::type;
 
 private:
-   template <class T>
-   std::vector<std::vector<T>> splitData(std::vector<T> &av);
-
    unsigned fNDomains{};
    unsigned fDomainNThreads{};
 };
-
-template <class T>
-std::vector<std::vector<T>> TNUMAExecutor::splitData(std::vector<T> &av)
-{
-   unsigned stride = (av.size() + fNDomains - 1) / fNDomains; // ceiling the division
-   std::vector<std::vector<T>> v;
-   unsigned i;
-   for (i = 0; i * stride < av.size() - stride; i++) {
-      v.emplace_back(std::vector<T>(av.begin() + i * stride, av.begin() + (i + 1) * stride));
-   }
-   v.emplace_back(std::vector<T>(av.begin() + i * stride, av.end()));
-
-   return v;
-}
 
 template <class F, class R, class Cond>
 auto TNUMAExecutor::MapReduce(F func, unsigned nTimes, R redfunc, unsigned nChunks) ->
    typename std::result_of<F()>::type
 {
-   auto runOnNode = [&](unsigned int i) {
-      numa_run_on_node(i);
+   if (fNDomains == 1) { // there are no NUMA domains, no need to create processes
       ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
-      if (fNDomains != 1) {
-         auto res =  i ? (nChunks ? threadExecutor.MapReduce(func, int(nTimes / fNDomains), redfunc, nChunks / fNDomains)
-                                  : threadExecutor.MapReduce(func, int(nTimes / fNDomains), redfunc))
-                       : (nChunks ? threadExecutor.MapReduce(func, nTimes / fNDomains + nTimes % fNDomains, redfunc, nChunks / fNDomains)
-                                  : threadExecutor.MapReduce(func, nTimes / fNDomains + nTimes % fNDomains, redfunc));
+      return nChunks ? threadExecutor.MapReduce(func, nTimes, redfunc, nChunks)
+                     : threadExecutor.MapReduce(func, nTimes, redfunc);
+   }
+   else { // if there are NUMA domains, fork and create task arenas inside each domain
+      auto runOnNode = [&](unsigned i) {
+         numa_run_on_node(i); // run current process on all cores in specific NUMA domain i
          numa_run_on_node_mask(numa_all_nodes_ptr);
-         return res;
-      }
-      else {
-         auto res = threadExecutor.MapReduce(func, nTimes, redfunc);
-         numa_run_on_node_mask(numa_all_nodes_ptr);
-         return res;
-      }
-   };
+         ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
 
-   ROOT::TProcessExecutor processExecutor(fNDomains);
-   return processExecutor.MapReduce(runOnNode, ROOT::TSeq<unsigned>(fNDomains), redfunc);
+         const unsigned nTimesPerProc = (nTimes + fNDomains - 1) / fNDomains; // ceiling the division
+         const unsigned nChunksPerProc = (nChunks + fNDomains - 1) / fNDomains; // ceiling the division
+
+         // split idea: first domain gets the remainder of repetions % domains, all other domains get
+         //             the upper bound of the division of repetions / domains (same applies for chunks)
+         // example: assume 7 repetitions in 3 domains --> 7%3, ceil(7/3), ceil(7/3) --> 1, 3, 3
+         return i ? (nChunks ? threadExecutor.MapReduce(func, nTimesPerProc, redfunc, nChunksPerProc)
+                             : threadExecutor.MapReduce(func, nTimesPerProc, redfunc))
+                  : (nChunks ? threadExecutor.MapReduce(func, nTimes % fNDomains, redfunc, nChunks % fNDomains)
+                             : threadExecutor.MapReduce(func, nTimes % fNDomains, redfunc));
+      };
+      ROOT::TProcessExecutor processExecutor(fNDomains); // fork first (no RTaskArenas created so far)
+      return processExecutor.MapReduce(runOnNode, ROOT::TSeq<unsigned>(fNDomains), redfunc);
+   } 
 }
 
 template <class F, class T, class R, class Cond>
 auto TNUMAExecutor::MapReduce(F func, std::vector<T> &args, R redfunc, unsigned nChunks) ->
    typename std::result_of<F(T)>::type
 {
-   auto dataRanges = splitData(args);
-   auto runOnNode = [&](unsigned int i) {
-      numa_run_on_node(i);
+   if (fNDomains == 1) { // there are no NUMA domains, no need to create processes
       ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
-      auto res = nChunks ? threadExecutor.MapReduce(func, dataRanges[i], redfunc, nChunks / fNDomains)
-                         : threadExecutor.MapReduce(func, dataRanges[i], redfunc);
-      numa_run_on_node_mask(numa_all_nodes_ptr);
-      return res;
-   };
+      return nChunks ? threadExecutor.MapReduce(func, args, redfunc, nChunks)
+                     : threadExecutor.MapReduce(func, args, redfunc);
+   }
+   else {
+      auto runOnNode = [&](unsigned int i) {
+         numa_run_on_node(i);
+         numa_run_on_node_mask(numa_all_nodes_ptr);
+         ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
 
-   ROOT::TProcessExecutor processExecutor(fNDomains);
-   return processExecutor.MapReduce(runOnNode, ROOT::TSeq<unsigned>(fNDomains), redfunc);
+         const auto lowerBoundRange = args.begin() + i * (args.size() + fNDomains - 1) / fNDomains; // beginning of vector split
+         const auto upperBoundRange = args.begin() + (i + 1) * (args.size() + fNDomains - 1) / fNDomains; // end of vector split
+         const unsigned nChunksPerProc = (nChunks + fNDomains - 1) / fNDomains; // ceiling the division
+
+         return (i == fNDomains - 1) ? (nChunks ? threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, args.end()), redfunc, nChunks % fNDomains)
+                                                : threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, args.end()), redfunc))
+                                     : (nChunks ? threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, upperBoundRange), redfunc, nChunksPerProc)
+                                                : threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, upperBoundRange), redfunc));
+      };
+      ROOT::TProcessExecutor processExecutor(fNDomains);
+      return processExecutor.MapReduce(runOnNode, ROOT::TSeq<unsigned>(fNDomains), redfunc);
+   }
 }
 
 template <class F, class INTEGER, class R, class Cond>
