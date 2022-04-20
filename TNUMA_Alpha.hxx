@@ -78,24 +78,25 @@ auto TNUMAExecutor::MapReduce(F func, unsigned nTimes, R redfunc, unsigned nChun
       ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
       return nChunks ? threadExecutor.MapReduce(func, nTimes, redfunc, nChunks)
                      : threadExecutor.MapReduce(func, nTimes, redfunc);
-   }
-   else { // if there are NUMA domains, fork and create task arenas inside each domain
+   } else { // if there are NUMA domains, fork and create task arenas inside each domain
       auto runOnNode = [&](unsigned i) {
          numa_run_on_node(i); // run current process on all cores in specific NUMA domain i
          numa_run_on_node_mask(numa_all_nodes_ptr);
-         ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
+         ROOT::TThreadExecutor threadExecutor{fDomainNThreads}; // threads created in 1 specific domain
 
-         const unsigned nTimesPerProc = (nTimes + fNDomains - 1) / fNDomains; // ceiling the division
-         const unsigned nChunksPerProc = (nChunks + fNDomains - 1) / fNDomains; // ceiling the division
-
-         // split idea: first domain gets the remainder of repetions % domains, all other domains get
-         //             the upper bound of the division of repetions / domains (same applies for chunks)
-         // example: assume 7 repetitions in 3 domains --> 7%3, ceil(7/3), ceil(7/3) --> 1, 3, 3
-         return i ? (nChunks ? threadExecutor.MapReduce(func, nTimesPerProc, redfunc, nChunksPerProc)
-                             : threadExecutor.MapReduce(func, nTimesPerProc, redfunc))
-                  : (nChunks ? threadExecutor.MapReduce(func, nTimes % fNDomains, redfunc, nChunks % fNDomains)
-                             : threadExecutor.MapReduce(func, nTimes % fNDomains, redfunc));
+         if (i != fNDomains - 1) {
+            const unsigned nTimesPerProc = (nTimes + fNDomains - 1) / fNDomains; // ceiling the division
+            const unsigned nChunksPerProc = (nChunks + fNDomains - 1) / fNDomains; // ceiling the division
+            return nChunks ? threadExecutor.MapReduce(func, nTimesPerProc, redfunc, nChunksPerProc)
+                           : threadExecutor.MapReduce(func, nTimesPerProc, redfunc);
+         } else {
+            const unsigned nTimesPerProc = nTimes - ((nTimes + fNDomains - 1) / fNDomains) * (fNDomains - 1);
+            const unsigned nChunksPerProc = nChunks - ((nChunks + fNDomains - 1) / fNDomains) * (fNDomains - 1);
+            return nChunks ? threadExecutor.MapReduce(func, nTimesPerProc, redfunc, nChunksPerProc)
+                           : threadExecutor.MapReduce(func, nTimesPerProc, redfunc);
+         }
       };
+
       ROOT::TProcessExecutor processExecutor(fNDomains); // fork first (no RTaskArenas created so far)
       return processExecutor.MapReduce(runOnNode, ROOT::TSeq<unsigned>(fNDomains), redfunc);
    } 
@@ -109,21 +110,25 @@ auto TNUMAExecutor::MapReduce(F func, std::vector<T> &args, R redfunc, unsigned 
       ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
       return nChunks ? threadExecutor.MapReduce(func, args, redfunc, nChunks)
                      : threadExecutor.MapReduce(func, args, redfunc);
-   }
-   else {
+   } else {
       auto runOnNode = [&](unsigned int i) {
          numa_run_on_node(i);
          numa_run_on_node_mask(numa_all_nodes_ptr);
          ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
 
-         const auto lowerBoundRange = args.begin() + i * (args.size() + fNDomains - 1) / fNDomains; // beginning of vector split
-         const auto upperBoundRange = args.begin() + (i + 1) * (args.size() + fNDomains - 1) / fNDomains; // end of vector split
-         const unsigned nChunksPerProc = (nChunks + fNDomains - 1) / fNDomains; // ceiling the division
-
-         return (i == fNDomains - 1) ? (nChunks ? threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, args.end()), redfunc, nChunks % fNDomains)
-                                                : threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, args.end()), redfunc))
-                                     : (nChunks ? threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, upperBoundRange), redfunc, nChunksPerProc)
-                                                : threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, upperBoundRange), redfunc));
+         if (i != fNDomains - 1) {
+            const auto lowerBoundRange = args.begin() + i * (args.size() + fNDomains - 1) / fNDomains; // beginning of vector split
+            const auto upperBoundRange = args.begin() + (i + 1) * (args.size() + fNDomains - 1) / fNDomains; // end of vector split
+            const unsigned nChunksPerProc = (nChunks + fNDomains - 1) / fNDomains; // ceiling the division
+            return nChunks ? threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, upperBoundRange), redfunc, nChunksPerProc)
+                           : threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, upperBoundRange), redfunc);
+         } else {
+            const auto lowerBoundRange = args.begin() + i * (args.size() + fNDomains - 1) / fNDomains; // beginning of vector split
+            const auto upperBoundRange = args.end(); // end of vector split
+            const unsigned nChunksPerProc = nChunks - ((nChunks + fNDomains - 1) / fNDomains) * (fNDomains - 1);
+            return nChunks ? threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, upperBoundRange), redfunc, nChunksPerProc)
+                           : threadExecutor.MapReduce(func, std::vector<T>(lowerBoundRange, upperBoundRange), redfunc);
+         }
       };
       ROOT::TProcessExecutor processExecutor(fNDomains);
       return processExecutor.MapReduce(runOnNode, ROOT::TSeq<unsigned>(fNDomains), redfunc);
@@ -134,19 +139,33 @@ template <class F, class INTEGER, class R, class Cond>
 auto TNUMAExecutor::MapReduce(F func, ROOT::TSeq<INTEGER> args, R redfunc, unsigned nChunks) ->
    typename std::result_of<F(INTEGER)>::type
 {
-   unsigned stride = (*args.end() - *args.begin() + fNDomains - 1) / fNDomains; // ceiling the division
-   auto runOnNode = [&](unsigned int i) {
-      numa_run_on_node(i);
+   if (fNDomains == 1) { // there are no NUMA domains, no need to create processes
       ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
-      ROOT::TSeq<unsigned> sequence(std::max(unsigned(*args.begin()), i *stride),
-                                    std::min((i + 1) * stride, unsigned(*args.end())));
-      auto res = threadExecutor.MapReduce(func, sequence, redfunc, nChunks / fNDomains);
-      numa_run_on_node_mask(numa_all_nodes_ptr);
-      return res;
-   };
+      return nChunks ? threadExecutor.MapReduce(func, args, redfunc, nChunks)
+                     : threadExecutor.MapReduce(func, args, redfunc);
+   } else {
+      auto runOnNode = [&](unsigned int i) {
+         numa_run_on_node(i);
+         numa_run_on_node_mask(numa_all_nodes_ptr);
+         ROOT::TThreadExecutor threadExecutor{fDomainNThreads};
 
-   ROOT::TProcessExecutor processExecutor(fNDomains);
-   return processExecutor.MapReduce(runOnNode, ROOT::TSeq<unsigned>(fNDomains), redfunc);
+         if (i != fNDomains - 1) {
+            const auto lowerBoundRange = args[0] + i * (args.size() + fNDomains - 1) / fNDomains; // beginning of vector split
+            const auto upperBoundRange = args[0] + (i + 1) * (args.size() + fNDomains - 1) / fNDomains; // end of vector split
+            const unsigned nChunksPerProc = (nChunks + fNDomains - 1) / fNDomains; // ceiling the division
+            return nChunks ? threadExecutor.MapReduce(func, ROOT::TSeq<INTEGER>(lowerBoundRange, upperBoundRange, args.step()), redfunc, nChunksPerProc)
+                           : threadExecutor.MapReduce(func, ROOT::TSeq<INTEGER>(lowerBoundRange, upperBoundRange, args.step()), redfunc);
+         } else {
+            const auto lowerBoundRange = args[0] + i * (args.size() + fNDomains - 1) / fNDomains; // beginning of vector split
+            const auto upperBoundRange = args[args.size()-1] + 1; // end of vector split
+            const unsigned nChunksPerProc = nChunks - ((nChunks + fNDomains - 1) / fNDomains) * (fNDomains - 1);
+            return nChunks ? threadExecutor.MapReduce(func, ROOT::TSeq<INTEGER>(lowerBoundRange, upperBoundRange, args.step()), redfunc, nChunksPerProc)
+                           : threadExecutor.MapReduce(func, ROOT::TSeq<INTEGER>(lowerBoundRange, upperBoundRange, args.step()), redfunc);
+         }
+      };
+      ROOT::TProcessExecutor processExecutor(fNDomains);
+      return processExecutor.MapReduce(runOnNode, ROOT::TSeq<INTEGER>(fNDomains), redfunc);
+   }
 }
 
 } // namespace Experimental
