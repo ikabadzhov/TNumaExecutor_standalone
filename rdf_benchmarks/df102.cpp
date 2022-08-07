@@ -8,6 +8,8 @@
 #include <iostream>
 #include "TStopwatch.h"
 
+#include "ROOT/TTreeProcessorMT.hxx"
+
 //#include <ROOT/RLogger.hxx>
 
 //auto verbosity = ROOT::Experimental::RLogScopedVerbosity(ROOT::Detail::RDF::RDFLogChannel(), ROOT::Experimental::ELogLevel::kInfo);
@@ -15,13 +17,14 @@
 
 using namespace ROOT::VecOps;
  
-void df102_NanoAODDimuonAnalysis()
+void df102_NanoAODDimuonAnalysis(int nfiles, bool numaopt)
 {
    // Enable multi-threading
    ROOT::EnableImplicitMT();
+   ROOT::TTreeProcessorMT::SetNUMAOPT(numaopt);
  
    // Create dataframe from NanoAOD files
-   ROOT::RDataFrame df("Events", std::vector<std::string>(20, "../PYTHON_tsts/Run2012BC_DoubleMuParked_Muons.root"));
+   ROOT::RDataFrame df("Events", std::vector<std::string>(nfiles, "INPUT/Run2012BC_DoubleMuParked_Muons.root"));
  
    // For simplicity, select only events with exactly two muons and require opposite charge
    auto df_2mu = df.Filter([](unsigned int n) { return n == 2; }, {"nMuon"}, "Events with exactly two muons");
@@ -62,11 +65,14 @@ void df102_NanoAODDimuonAnalysis()
    report->Print();
 }
  
-int main()
+int main(int argc, const char* argv[])
 {
+  int nf = atoi(argv[1]);
+  bool numaopt = (argc>2) ? bool(atoi(argv[2])): false;
+
   TStopwatch s;
   s.Start();
-  df102_NanoAODDimuonAnalysis();
+  df102_NanoAODDimuonAnalysis(nf, numaopt);
   s.Stop();
   std::cout << "Elapsed: " << s.RealTime() << std::endl;
 }
