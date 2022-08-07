@@ -5,6 +5,8 @@
 #include <iostream>
 #include "TStopwatch.h"
 
+#include "ROOT/TTreeProcessorMT.hxx"
+
 //#include <ROOT/RLogger.hxx>
 
 //auto verbosity = ROOT::Experimental::RLogScopedVerbosity(ROOT::Detail::RDF::RDFLogChannel(), ROOT::Experimental::ELogLevel::kInfo);
@@ -35,9 +37,10 @@ ROOT::RVec<int> find_isolated_jets(Vec<float> eta1, Vec<float> phi1, Vec<float> 
     return mask;
 }
 
-void rdataframe() {
+void rdataframe(int nfiles, bool numaopt) {
     ROOT::EnableImplicitMT();
-    ROOT::RDataFrame df("Events", "root://eospublic.cern.ch//eos/root-eos/benchmark/Run2012B_SingleMu.root");
+    ROOT::TTreeProcessorMT::SetNUMAOPT(numaopt);
+    ROOT::RDataFrame df("Events", std::vector<std::string>(nfiles, "INPUT/Run2012B_SingleMu.root"));
     auto h = df.Filter([](unsigned int n) { return n > 0; }, {"nJet"}, "At least one jet")
                .Define("goodJet_ptcut", [](const ROOT::RVec<float>& pt) { return pt > 30; }, {"Jet_pt"})
                .Define("goodJet_antiMuon",
@@ -62,10 +65,13 @@ void rdataframe() {
     c.SaveAs("7_rdataframe_compiled.png");
 }
 
-int main() {
+int main(int argc, const char* argv[]) {
+  int nf = atoi(argv[1]);
+  bool numaopt = (argc>2) ? bool(atoi(argv[2])): false;
+
   TStopwatch s;
   s.Start();
-  rdataframe();
+  rdataframe(nf, numaopt);
   s.Stop();
-  std::cout << "Elapsed: " << s.RealTime() << std::endl;
+  std::cout << "Elapsed (od7_6): " << s.RealTime() << std::endl;
 }

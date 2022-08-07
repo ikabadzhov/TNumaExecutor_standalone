@@ -13,9 +13,14 @@
 
 #include <ROOT/RDFHelpers.hxx>
 
-#include <ROOT/RLogger.hxx>
+#include <iostream>
+#include "TStopwatch.h"
 
-auto verbosity = ROOT::Experimental::RLogScopedVerbosity(ROOT::Detail::RDF::RDFLogChannel(), ROOT::Experimental::ELogLevel::kInfo);
+#include "ROOT/TTreeProcessorMT.hxx"
+
+//#include <ROOT/RLogger.hxx>
+
+//auto verbosity = ROOT::Experimental::RLogScopedVerbosity(ROOT::Detail::RDF::RDFLogChannel(), ROOT::Experimental::ELogLevel::kInfo);
 
  
 using namespace ROOT::VecOps;
@@ -310,7 +315,7 @@ void plot(T sig, T bkg, T data, const std::string &x_label, const std::string &f
    // Canvas and general style options
    gStyle->SetOptStat(0);
    gStyle->SetTextFont(42);
-   auto c = new TCanvas("c", "", 800, 700);
+   auto c = new TCanvas("", "", 800, 700);
    c->SetLeftMargin(0.15);
  
    // Get signal and background histograms and stack them to show Higgs signal
@@ -368,33 +373,33 @@ void plot(T sig, T bkg, T data, const std::string &x_label, const std::string &f
    c->SaveAs(filename.c_str());
 }
  
-void df103_NanoAODHiggsAnalysis(const bool run_fast = true)
+void df103_NanoAODHiggsAnalysis(int nfiles, bool numaopt)
 {
    // Enable multi-threading
-   //ROOT::EnableImplicitMT();
- 
-   // In fast mode, take samples from */cms_opendata_2012_nanoaod_skimmed/*, which has
-   // the preselections from the selection_* functions already applied.
-   std::string path = "root://eospublic.cern.ch//eos/root-eos/cms_opendata_2012_nanoaod/";
-   if (run_fast) path = "root://eospublic.cern.ch//eos/root-eos/cms_opendata_2012_nanoaod_skimmed/";
+   ROOT::EnableImplicitMT();
+   ROOT::TTreeProcessorMT::SetNUMAOPT(numaopt);
  
    // Create dataframes for signal, background and data samples
  
    // Signal: Higgs -> 4 leptons
-   ROOT::RDataFrame df_sig_4l("Events", path + "SMHiggsToZZTo4L.root");
+   ROOT::RDataFrame df_sig_4l("Events", std::vector<std::string>(nfiles, "INPUT/cms_opendata_2012_nanoaod/SMHiggsToZZTo4L.root"));
  
    // Background: ZZ -> 4 leptons
    // Note that additional background processes from the original paper with minor contribution were left out for this
    // tutorial.
-   ROOT::RDataFrame df_bkg_4mu("Events", path + "ZZTo4mu.root");
-   ROOT::RDataFrame df_bkg_4el("Events", path + "ZZTo4e.root");
-   ROOT::RDataFrame df_bkg_2el2mu("Events", path + "ZZTo2e2mu.root");
+   ROOT::RDataFrame df_bkg_4mu("Events", std::vector<std::string>(nfiles, "INPUT/cms_opendata_2012_nanoaod/ZZTo4mu.root"));
+   ROOT::RDataFrame df_bkg_4el("Events", std::vector<std::string>(nfiles, "INPUT/cms_opendata_2012_nanoaod/ZZTo4e.root"));
+   ROOT::RDataFrame df_bkg_2el2mu("Events", std::vector<std::string>(nfiles, "INPUT/cms_opendata_2012_nanoaod/ZZTo2e2mu.root"));
  
    // CMS data taken in 2012 (11.6 fb^-1 integrated luminosity)
-   ROOT::RDataFrame df_data_doublemu(
-      "Events", {path + "Run2012B_DoubleMuParked.root", path + "Run2012C_DoubleMuParked.root"});
-   ROOT::RDataFrame df_data_doubleel(
-      "Events", {path + "Run2012B_DoubleElectron.root", path + "Run2012C_DoubleElectron.root"});
+   std::vector<std::string> inpMu (2*nfiles);
+   std::fill_n(inpMu.begin(), nfiles, "INPUT/cms_opendata_2012_nanoaod/Run2012B_DoubleMuParked.root");
+   std::fill_n(inpMu.begin() + nfiles, nfiles, "INPUT/cms_opendata_2012_nanoaod/Run2012C_DoubleMuParked.root");
+   ROOT::RDataFrame df_data_doublemu("Events", inpMu);
+   std::vector<std::string> inpEl (2*nfiles);
+   std::fill_n(inpEl.begin(), nfiles, "INPUT/cms_opendata_2012_nanoaod/Run2012B_DoubleElectron.root");
+   std::fill_n(inpEl.begin() + nfiles, nfiles, "INPUT/cms_opendata_2012_nanoaod/Run2012C_DoubleElectron.root");
+   ROOT::RDataFrame df_data_doubleel("Events", inpEl);
  
    // Reconstruct Higgs to 4 muons
    auto df_sig_4mu_reco = reco_higgs_to_4mu(df_sig_4l);
@@ -479,7 +484,14 @@ void df103_NanoAODHiggsAnalysis(const bool run_fast = true)
    plot(h_sig_4l, h_bkg_4l, h_data_4l, "m_{4l} (GeV)", "higgs_4l.pdf");
 }
  
-int main()
+int main(int argc, const char* argv[])
 {
-   df103_NanoAODHiggsAnalysis(/*fast=*/true);
+  int nf = atoi(argv[1]);
+  bool numaopt = (argc>2) ? bool(atoi(argv[2])): false;
+
+  TStopwatch s;
+  s.Start();
+  df103_NanoAODHiggsAnalysis(nf, numaopt);
+  s.Stop();
+  std::cout << "Elapsed (higgs): " << s.RealTime() << std::endl;
 }

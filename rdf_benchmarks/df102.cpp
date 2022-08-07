@@ -74,5 +74,5 @@ int main(int argc, const char* argv[])
   s.Start();
   df102_NanoAODDimuonAnalysis(nf, numaopt);
   s.Stop();
-  std::cout << "Elapsed: " << s.RealTime() << std::endl;
+  std::cout << "Elapsed (df102): " << s.RealTime() << std::endl;
 }

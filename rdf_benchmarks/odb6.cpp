@@ -6,6 +6,8 @@
 #include <iostream>
 #include "TStopwatch.h"
 
+#include "ROOT/TTreeProcessorMT.hxx"
+
 //#include <ROOT/RLogger.hxx>
 
 //auto verbosity = ROOT::Experimental::RLogScopedVerbosity(ROOT::Detail::RDF::RDFLogChannel(), ROOT::Experimental::ELogLevel::kInfo);
@@ -44,12 +46,13 @@ float trijet_pt(Vec<float> pt, Vec<float> eta, Vec<float> phi, Vec<float> mass, 
 }
 
 
-void rdataframe() {
+void rdataframe(int nfiles, bool numaopt) {
     using ROOT::Math::PtEtaPhiMVector;
     using ROOT::VecOps::Construct;
 
     ROOT::EnableImplicitMT();
-    ROOT::RDataFrame df("Events", std::vector<std::string>(3, "../../Run2012B_SingleMu.root"));
+    ROOT::TTreeProcessorMT::SetNUMAOPT(numaopt);
+    ROOT::RDataFrame df("Events", std::vector<std::string>(nfiles, "INPUT/Run2012B_SingleMu.root"));
     auto df2 = df.Filter([](unsigned int n) { return n >= 3; }, {"nJet"}, "At least three jets")
                  .Define("JetXYZT", [](Vec<float> pt, Vec<float> eta, Vec<float> phi, Vec<float> m) {
                               return Construct<XYZTVector>(Construct<PtEtaPhiMVector>(pt, eta, phi, m));},
@@ -71,10 +74,13 @@ void rdataframe() {
     c.SaveAs("6_rdataframe_compiled.png");
 }
 
-int main() {
+int main(int argc, const char* argv[]) {
+  int nf = atoi(argv[1]);
+  bool numaopt = (argc>2) ? bool(atoi(argv[2])): false;
+
   TStopwatch s;
   s.Start();
-  rdataframe();
+  rdataframe(nf, numaopt);
   s.Stop();
-  std::cout << "Elapsed: " << s.RealTime() << std::endl;
+  std::cout << "Elapsed (odb_6): " << s.RealTime() << std::endl;
 }
