@@ -1,0 +1,147 @@
+i-go-crazy-cern 3959852 6170473.857471:          1 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857487:          1 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857492:          2 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857496:          7 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857501:         27 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857505:        102 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857510:        377 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857514:       1395 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857518:       5332 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857523:      19853 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857534:      75755 cycles:u: 
+	    7f0570e97950 _start+0x0 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857558:     152177 cycles:u: 
+	    7f0570e9bcf1 dl_main+0x3001 (/usr/lib64/ld-2.28.so)
+	    7f0570e96fbe _dl_sysdep_start+0x33e (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857608:     211670 cycles:u: 
+	    7f0570e9d7e1 __GI___open64_nocancel+0x31 (/usr/lib64/ld-2.28.so)
+	    7f0570e8413e open_path+0x1ae (/usr/lib64/ld-2.28.so)
+	    7f0570e868e5 _dl_map_object+0x2b5 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857700:     213351 cycles:u: 
+	    7f0570e7be9b mprotect+0xb (/usr/lib64/ld-2.28.so)
+	    7f0570e86831 _dl_map_object+0x201 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857772:     215684 cycles:u: 
+	    7f0570e911d8 _dl_load_cache_lookup+0x168 (/usr/lib64/ld-2.28.so)
+	    7f0570e86b92 _dl_map_object+0x562 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857842:     226441 cycles:u: 
+	    7f0570e9d7e1 __GI___open64_nocancel+0x31 (/usr/lib64/ld-2.28.so)
+	    7f0570e8413e open_path+0x1ae (/usr/lib64/ld-2.28.so)
+	    7f0570e868e5 _dl_map_object+0x2b5 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.857915:     238305 cycles:u: 
+	    7f0570e9d7e1 __GI___open64_nocancel+0x31 (/usr/lib64/ld-2.28.so)
+	    7f0570e8413e open_path+0x1ae (/usr/lib64/ld-2.28.so)
+	    7f0570e868e5 _dl_map_object+0x2b5 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.858011:     249068 cycles:u: 
+	    7f0570e9d7e1 __GI___open64_nocancel+0x31 (/usr/lib64/ld-2.28.so)
+	    7f0570e86bde _dl_map_object+0x5ae (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.858086:     250493 cycles:u: 
+	    7f0570e9d9f7 mmap64+0x47 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.858160:     260779 cycles:u: 
+	    7f0570e84f49 _dl_map_object_from_fd+0x929 (/usr/lib64/ld-2.28.so)
+	    7f0570e86831 _dl_map_object+0x201 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.858248:     272163 cycles:u: 
+	    7f0570e8801e _dl_lookup_symbol_x+0xbe (/usr/lib64/ld-2.28.so)
+	    7f056ff53690 [unknown] (/usr/lib64/libc-2.28.so)
+	          3c5470 [unknown] ([unknown])
+
+i-go-crazy-cern 3959852 6170473.858339:     277018 cycles:u: 
+	    7f0570e87793 do_lookup_x+0x373 (/usr/lib64/ld-2.28.so)
+	               0 [unknown] ([unknown])
+
+i-go-crazy-cern 3959852 6170473.858420:     280617 cycles:u: 
+	    7f0570e8d258 _dl_relocate_object+0xb98 (/usr/lib64/ld-2.28.so)
+	    7f0570e9ae63 dl_main+0x2173 (/usr/lib64/ld-2.28.so)
+	    7f0570e96fbe _dl_sysdep_start+0x33e (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.858501:     288789 cycles:u: 
+	    7f0570e880b8 _dl_lookup_symbol_x+0x158 (/usr/lib64/ld-2.28.so)
+	    7f0570907580 [unknown] (/usr/lib64/libstdc++.so.6.0.25)
+	          3871e0 [unknown] ([unknown])
+
+i-go-crazy-cern 3959852 6170473.858584:     297198 cycles:u: 
+	    7f0570e87779 do_lookup_x+0x359 (/usr/lib64/ld-2.28.so)
+	               0 [unknown] ([unknown])
+
+i-go-crazy-cern 3959852 6170473.858685:     304781 cycles:u: 
+	    7f0570e8ccd1 _dl_relocate_object+0x611 (/usr/lib64/ld-2.28.so)
+	    7f0570e9ae63 dl_main+0x2173 (/usr/lib64/ld-2.28.so)
+	    7f0570e96fbe _dl_sysdep_start+0x33e (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.858777:     304674 cycles:u: 
+	    7f0570e87fae _dl_lookup_symbol_x+0x4e (/usr/lib64/ld-2.28.so)
+	    7f0570907580 [unknown] (/usr/lib64/libstdc++.so.6.0.25)
+	           e9ce0 [unknown] ([unknown])
+
+i-go-crazy-cern 3959852 6170473.858870:     307645 cycles:u: 
+	    7f0570e87fa7 _dl_lookup_symbol_x+0x47 (/usr/lib64/ld-2.28.so)
+	    7f0570907580 [unknown] (/usr/lib64/libstdc++.so.6.0.25)
+	          126210 [unknown] ([unknown])
+
+i-go-crazy-cern 3959852 6170473.858971:     310694 cycles:u: 
+	    7f0570e87fae _dl_lookup_symbol_x+0x4e (/usr/lib64/ld-2.28.so)
+	    7f0570907580 [unknown] (/usr/lib64/libstdc++.so.6.0.25)
+	          144c60 [unknown] ([unknown])
+
+i-go-crazy-cern 3959852 6170473.859061:     310257 cycles:u: 
+	    7f0570e87fae _dl_lookup_symbol_x+0x4e (/usr/lib64/ld-2.28.so)
+	    7f0570907580 [unknown] (/usr/lib64/libstdc++.so.6.0.25)
+	           c9720 [unknown] ([unknown])
+
+i-go-crazy-cern 3959852 6170473.859151:     314890 cycles:u: 
+	    7f0570e876f3 do_lookup_x+0x2d3 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.859243:     319303 cycles:u: 
+	    7f056fb28d00 __libc_sigaction+0x0 (/usr/lib64/libpthread-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.859337:     322573 cycles:u: 
+	    7f0570c4f7b0 tbb::detail::r1::__TBB_InitOnce::add_ref+0x0 (/data/ikabadzh/august_investigation/TBB_standalone/oneTBB/build/gnu_8.5_cxx11_64_relwithdebinfo/libtbb.so.12.7)
+
+i-go-crazy-cern 3959852 6170473.859432:     325106 cycles:u: 
+	    7f0570e9d607 _fxstat+0x17 (/usr/lib64/ld-2.28.so)
+	    7f0570e86831 _dl_map_object+0x201 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.859529:     327502 cycles:u: 
+	    7f0570e7f5f7 strchr+0x27 (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.859624:     328485 cycles:u: 
+	    7f0570e9d7e1 __GI___open64_nocancel+0x31 (/usr/lib64/ld-2.28.so)
+	    7f0570e8413e open_path+0x1ae (/usr/lib64/ld-2.28.so)
+	    7f0570e86cbf _dl_map_object+0x68f (/usr/lib64/ld-2.28.so)
+
+i-go-crazy-cern 3959852 6170473.859737:     330548 cycles:u: 
+	    7f0570930e14 operator new[]+0x4 (/usr/lib64/libstdc++.so.6.0.25)
+
+i-go-crazy-cern 3959852 6170473.859839:     326004 cycles:u: 
+	    7f0570c4e6fc tbb::detail::r1::__TBB_InitOnce::remove_ref+0xac (/data/ikabadzh/august_investigation/TBB_standalone/oneTBB/build/gnu_8.5_cxx11_64_relwithdebinfo/libtbb.so.12.7)
+	               0 [unknown] ([unknown])
+
